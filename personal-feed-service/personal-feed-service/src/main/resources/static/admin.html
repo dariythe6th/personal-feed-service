@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Админка — Управление игровыми новостями</title>
+    <style>
+        body {
+          font-family: 'Segoe UI', sans-serif;
+          background: #0f0f23;
+          color: #e0e0ff;
+          margin: 0;
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        h1, h2 { color: #00ff9d; text-align: center; margin: 30px 0 20px; }
+
+        .form {
+          background: #16213e;
+          padding: 30px;
+          border-radius: 15px;
+          margin-bottom: 50px;
+          box-shadow: 0 10px 30px rgba(0,255,150,0.2);
+        }
+        input, textarea, button {
+          width: 100%;
+          padding: 15px;
+          margin: 12px 0;
+          border: none;
+          border-radius: 10px;
+          font-size: 1em;
+          box-sizing: border-box;
+        }
+        input, textarea { background: #0f0f23; color: white; }
+        button { background: #00ff9d; color: #000; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #00cc7a; transform: scale(1.02); }
+
+        .articles { display: grid; gap: 25px; }
+
+        .article-card {
+          background: #16213e;
+          padding: 25px;
+          border-radius: 15px;
+          position: relative;
+          min-height: 120px;
+          box-shadow: 0 8px 25px rgba(0,255,150,0.15);
+          transition: transform 0.3s;
+        }
+        .article-card:hover { transform: translateY(-5px); }
+
+        /* КЛУЧШЕЕ РЕШЕНИЕ — кнопка в шапке карточки, а не поверх текста*/
+        .article-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 15px;
+        }
+        .article-header h3 {
+          margin: 0;
+          flex: 1;
+          padding-right: 120px; /* место под кнопку */
+          word-wrap: break-word;
+        }
+
+        .delete-btn {
+          background: #e74c3c;
+          color: white;
+          border: none;
+          width: 100px;
+          padding: 8px 16px;
+          border-radius: 20px;
+          cursor: pointer;
+          font-size: 0.9em;
+          white-space: nowrap;
+          transition: 0.3s;
+        }
+        .delete-btn:hover { background: #c0392b; }
+
+        .tag {
+          background: #00ff9d;
+          color: #000;
+          padding: 4px 10px;
+          border-radius: 15px;
+          font-size: 0.8em;
+          display: inline-block;
+          margin: 4px 4px 4px 0;
+        }
+
+        .back {
+          position: fixed;
+          top: 20px;
+          left: 20px;
+          background: #3498db;
+          color: white;
+          padding: 10px 20px;
+          border-radius: 30px;
+          text-decoration: none;
+          z-index: 100;
+        }
+    </style>
+</head>
+<body>
+<a href="index.html" class="back">← Назад к ленте</a>
+<div class="container">
+    <h1>Админка — Добавление игровой новости</h1>
+    <div class="form">
+        <input id="title" placeholder="Заголовок (например: GTA VI выйдет в 2025)" />
+        <textarea id="content" placeholder="Краткое содержание новости..."></textarea>
+        <input id="tags" placeholder="Теги через запятую: gta, rockstar, open world, ps5" />
+        <button onclick="createArticle()">Опубликовать новость</button>
+    </div>
+
+    <h2>Существующие новости (<span id="count">0</span>)</h2>
+    <div id="articles" class="articles"></div>
+</div>
+
+<script>
+    const AUTH = 'Basic ' + btoa('admin:admin');
+
+    async function loadArticles() {
+      try {
+        const res = await fetch('/admin/articles', { headers: { Authorization: AUTH } });
+        const articles = await res.json();
+        document.getElementById('count').textContent = articles.length;
+
+        const container = document.getElementById('articles');
+        container.innerHTML = articles.map(a => `
+  <div class="article-card">
+    <div class="article-header">
+      <h3>${a.title}</h3>
+      <button class="delete-btn" onclick="deleteArticle(${a.id})">Удалить</button>
+    </div>
+    <p>${a.content}</p>
+    <div style="margin: 15px 0;">
+      ${[...a.tags].map(t => `<span class="tag">${t}</span>`).join('')}
+    </div>
+    <small style="color:#888;">${new Date(a.timestamp).toLocaleString('ru-RU')}</small>
+  </div>
+`).join('');
+      } catch (e) {
+        document.getElementById('articles').innerHTML = '<p style="color: #e74c3c; text-align: center;">Ошибка загрузки новостей. Перезапусти контейнер.</p>';
+      }
+    }
+
+    async function createArticle() {
+      const title = document.getElementById('title').value.trim();
+      const content = document.getElementById('content').value.trim();
+      const tagsStr = document.getElementById('tags').value;
+
+      if (!title || !content) {
+        alert('Заполни заголовок и текст!');
+        return;
+      }
+
+      const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
+
+      await fetch('/admin/articles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: AUTH },
+        body: JSON.stringify({ title, content, tags })
+      });
+
+      // Очистка формы
+      document.getElementById('title').value = '';
+      document.getElementById('content').value = '';
+      document.getElementById('tags').value = '';
+
+      loadArticles(); // обновляем список
+      alert('Новость опубликована!');
+    }
+
+    async function deleteArticle(id) {
+      if (!confirm('Удалить эту новость?')) return;
+      await fetch(`/admin/articles/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: AUTH }
+      });
+      loadArticles();
+    }
+
+    // Загружаем при старте
+    loadArticles();
+</script>
+</body>
+</html>

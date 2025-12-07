@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Gaming Feed — Персональная лента новостей</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #0f0f23; color: #e0e0ff; }
+        header { background: #1a1a2e; padding: 20px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        h1 { margin: 0; color: #00ff9d; }
+        .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
+        .search-bar {
+          width: 100%; padding: 100%; padding: 15px; font-size: 1.2em; border: none; border-radius: 50px;
+          background: #16213e; color: white; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,255,150,0.2);
+        }
+        .search-bar:focus { outline: 3px solid #00ff9d; }
+        .article {
+          background: #16213e; padding: 25px; margin: 20px 0; border-radius: 15px;
+          box-shadow: 0 5px 20px rgba(0, 255, 150, 0.1); transition: all 0.3s;
+        }
+        .article:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0, 255, 150, 0.25); }
+        .title { font-size: 1.6em; margin: 0 0 10px; color: #00ff9d; }
+        .content { line-height: 1.6; opacity: 0.9; }
+        .meta { margin: 15px 0; font-size: 0.9em; color: #888; }
+        .tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+        .tag { background: #00ff9d; color: #000; padding: 5px 12px; border-radius: 20px; font-size: 0.8em; }
+        .actions button {
+          padding: 10px 20px; margin-right: 10px; border: none; border-radius: 25px;
+          cursor: pointer; font-weight: bold; transition: 0.3s;
+        }
+        .view-btn { background: #3498db; color: white; }
+        .like-btn { background: #e74c3c; color: white; }
+        .like-btn.liked { background: #c0392b; transform: scale(1.1); }
+        .admin-link { position: fixed; top: 20px; right: 20px; background: #e74c3c; color: white; padding: 10px 20px; border-radius: 30px; text-decoration: none; }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Gaming Feed</h1>
+    <a href="admin.html" class="admin-link">Админка</a>
+</header>
+
+<div class="container">
+    <input
+            type="text"
+            class="search-bar"
+            id="search"
+            placeholder="Поиск по заголовку или тегу: gta, elden ring, cyberpunk..."
+            onkeyup="filterFeed()"
+    />
+    <div id="feed"></div>
+</div>
+
+<script>
+    const USER_ID = 1;
+    const AUTH = 'Basic ' + btoa('admin:admin');
+    let allArticles = [];
+
+    async function loadFeed() {
+      try {
+        const res = await fetch(`/feed/${USER_ID}`, { headers: { Authorization: AUTH } });
+        allArticles = await res.json();
+        renderFeed(allArticles);
+      } catch (e) {
+        document.getElementById('feed').innerHTML = '<p style="color:red">Ошибка загрузки. Проверьте, запущен ли бэкенд.</p>';
+      }
+    }
+
+    function renderFeed(articles) {
+      const feed = document.getElementById('feed');
+      if (articles.length === 0) {
+        feed.innerHTML = '<p style="text-align:center; color:#888;">Ничего не найдено</p>';
+        return;
+      }
+      feed.innerHTML = articles.map(a => `
+        <div class="article">
+          <h2 class="title">${a.title}</h2>
+          <div class="content">${a.content}</div>
+          <div class="meta">Опубликовано: ${new Date(a.timestamp).toLocaleString('ru-RU')}</div>
+          <div class="tags">
+            ${[...a.tags].map(tag => `<span class="tag">${tag}</span>`).join('')}
+          </div>
+          <div class="actions">
+            <button class="view-btn" onclick="recordView(${a.id})">Прочитано</button>
+            <button class="like-btn" onclick="like(${a.id}, this)">❤️ Лайк</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function recordView(id) {
+      await fetch(`/feed/${USER_ID}/view/${id}`, { method: 'POST', headers: { Authorization: AUTH } });
+    }
+
+    async function like(id, btn) {
+      await fetch(`/feed/${USER_ID}/like/${id}`, { method: 'POST', headers: { Authorization: AUTH } });
+      btn.classList.toggle('liked');
+      btn.innerText = btn.classList.contains('liked') ? 'Лайкнуто!' : '❤️ Лайк';
+    }
+
+    function filterFeed() {
+      const query = document.getElementById('search').value.toLowerCase();
+      const filtered = allArticles.filter(a =>
+        a.title.toLowerCase().includes(query) ||
+        a.tags.some(tag => tag.toLowerCase().includes(query))
+      );
+      renderFeed(filtered);
+    }
+
+    // Загружаем при старте и каждые 30 сек
+    loadFeed();
+    setInterval(loadFeed, 30000);
+</script>
+</body>
+</html>
