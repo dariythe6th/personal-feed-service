@@ -6,15 +6,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Set;
-import java.io.Serializable;   // ← ДОБАВЬ ЭТОТ ИМПОРТ
+import java.io.Serializable;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class NewsArticle implements Serializable {   // ← И ЭТО!
-    private static final long serialVersionUID = 1L;  // ← Лучше добавить
-
+public class NewsArticle implements Serializable {
+    private static final long serialVersionUID = 1L;
     private Long id;
     private String title;
     private String content;

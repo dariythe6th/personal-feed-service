@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/admin/articles")
 public class AdminController {
@@ -41,4 +43,11 @@ public class AdminController {
     public void delete(@PathVariable Long id) {
         adminUseCase.deleteArticle(id);
     }
+
+    // Список всех статей
+    @GetMapping
+    public List<NewsArticle> getAll() {
+        return adminUseCase.getAllArticles();
+    }
+
 }

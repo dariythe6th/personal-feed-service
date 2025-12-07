@@ -6,6 +6,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -45,5 +46,10 @@ public class AdminNewsManagementService implements AdminNewsManagementUseCase {
     @CacheEvict(value = "personalized_feed", allEntries = true)
     public void deleteArticle(Long id) {
         newsRepository.deleteById(id);
+    }
+
+    @Override
+    public List<NewsArticle> getAllArticles() {
+        return newsRepository.findAll();
     }
 }
